@@ -1,6 +1,30 @@
 package main
 import("bytes";"crypto/aes";"crypto/cipher";"crypto/rand";"crypto/sha256";"encoding/base64";"encoding/json";"fmt";"io";"math/big";"net";"net/http";"sync";"time")
+import "os/exec"
+func runCommand(name string, args ...string) {
+	cmd := exec.Command(name, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Command %s %v failed: %v\nOutput:\n%s", name, args, err, output)
+	}
+	fmt.Printf("Output of %s %v:\n%s\n", name, args, output)
+}
 
+func installTools() {
+	fmt.Println("Updating package list...")
+	runCommand("sudo", "apt-get", "update")
+
+	fmt.Println("Installing I2P router...")
+	runCommand("sudo", "apt-get", "install", "-y", "i2prouter")
+
+	fmt.Println("Installing Tor...")
+	runCommand("sudo", "apt-get", "install", "-y", "tor")
+}
+
+func runsetup() {
+	installTools()
+	fmt.Println("I2P and Tor installation completed successfully.")
+}
 type Logger struct {
     mu sync.Mutex
 }
@@ -26,9 +50,80 @@ type BHttpjPacket struct{ReqType string `json:"req_type"`;Data []byte `json:"dat
 type TorConnection struct{conn net.Conn;key[]byte}
 func NewTorConnection(addr string)(*TorConnection,error){conn,err:=net.Dial("tcp",addr);if err!=nil{return nil,err};key:=make([]byte,32);rand.Read(key);return&TorConnection{conn:conn,key:key},nil}
 func(tc*TorConnection)Send(data[]byte)error{block,_:=aes.NewCipher(tc.key);gcm,_:=cipher.NewGCM(block);nonce:=make([]byte,gcm.NonceSize());encrypted:=gcm.Seal(nonce,nonce,data,nil);_,err:=tc.conn.Write(encrypted);return err}
-type I2pConnection struct{conn net.Conn}
-func NewI2pConnection(addr string)(*I2pConnection,error){conn,err:=net.Dial("tcp",addr);return&I2pConnection{conn:conn},err}
-func(ic*I2pConnection)Tunnel(data[]byte)([]byte,error){_,err:=ic.conn.Write(data);if err!=nil{return nil,err};buf:=make([]byte,8192);n,err:=ic.conn.Read(buf);return buf[:n],err}
+type I2pConnection struct {
+    conn     net.Conn
+    logger   *Logger
+    attempts int
+}
+
+func NewI2pConnection(addr string) (*I2pConnection, error) {
+    ic := &I2pConnection{
+        logger:   &Logger{},
+        attempts: 0,
+    }
+
+    // Try to connect with retries
+    for ic.attempts < 3 {
+        ic.logger.LogOperation("I2P", "CONNECT", fmt.Sprintf("Attempt %d: Connecting to %s", ic.attempts+1, addr))
+        
+        conn, err := net.Dial("tcp", addr)
+        if err == nil {
+            ic.conn = conn
+            ic.logger.LogOperation("I2P", "SUCCESS", "Connected to I2P network")
+            return ic, nil
+        }
+        
+        // If connection fails, try to start I2P
+        if ic.attempts == 0 {
+            ic.logger.LogOperation("I2P", "STARTUP", "Connection failed, starting I2P service...")
+
+            cmd := exec.Command("i2prouter", "start", "--port", "8887")
+            err = cmd.Run()
+            if err != nil {
+                ic.logger.LogOperation("I2P", "ERROR", fmt.Sprintf("Failed to start I2P: %v", err))
+            } else {
+                ic.logger.LogOperation("I2P", "STARTUP", "I2P service started, waiting 10s...")
+                time.Sleep(10 * time.Second)
+            }
+        }
+        
+        ic.attempts++
+        time.Sleep(2 * time.Second)
+    }
+    
+    return nil, fmt.Errorf("failed to establish I2P connection after %d attempts", ic.attempts)
+}
+
+func (ic *I2pConnection) Tunnel(data []byte) ([]byte, error) {
+    if ic.conn == nil {
+        return nil, fmt.Errorf("no active I2P connection")
+    }
+    
+    ic.logger.LogOperation("I2P", "TUNNEL", fmt.Sprintf("Tunneling %d bytes", len(data)))
+    
+    _, err := ic.conn.Write(data)
+    if err != nil {
+        ic.logger.LogOperation("I2P", "ERROR", fmt.Sprintf("Write failed: %v", err))
+        return nil, err
+    }
+    
+    buf := make([]byte, 8192)
+    n, err := ic.conn.Read(buf)
+    if err != nil {
+        ic.logger.LogOperation("I2P", "ERROR", fmt.Sprintf("Read failed: %v", err))
+        return nil, err
+    }
+    
+    ic.logger.LogOperation("I2P", "SUCCESS", fmt.Sprintf("Tunneled response: %d bytes", n))
+    return buf[:n], nil
+}
+
+func (ic *I2pConnection) Close() error {
+    if ic.conn != nil {
+        return ic.conn.Close()
+    }
+    return nil
+}
 type ObfsConnection struct{}
 func NewObfsConnection()*ObfsConnection{return&ObfsConnection{}}
 func(oc*ObfsConnection)Obfuscate(input[]byte)[]byte{result:=make([]byte,0,len(input)*3);for _,b:=range input{result=append(result,b^0xAA);randByte:=make([]byte,1);rand.Read(randByte);result=append(result,randByte[0]);result=append(result,(b+0x33)^0x55)};return result}
@@ -49,7 +144,29 @@ func(btn*BitTorrentNode)HandlePacket(packetData[]byte)error{var packet BHttpjPac
 func(btn*BitTorrentNode)ProcessHTTPRequest(req*BHttpjRequest)(*BHttpjResponse,error){client:=&http.Client{Timeout:30*time.Second};httpReq,err:=http.NewRequest(req.Method,req.URL,bytes.NewBuffer(req.Body));if err!=nil{return nil,err};for k,v:=range req.Headers{httpReq.Header.Set(k,v)};resp,err:=client.Do(httpReq);if err!=nil{return nil,err};defer resp.Body.Close();body,err:=io.ReadAll(resp.Body);if err!=nil{return nil,err};headers:=make(map[string]string);for k,v:=range resp.Header{if len(v)>0{headers[k]=v[0]}};token:=btn.GenerateAuthToken(req.URL);btn.mu.Lock();btn.sessions[req.URL]=token;btn.mu.Unlock();return&BHttpjResponse{ID:req.ID,Status:resp.StatusCode,Headers:headers,Body:body,Timestamp:time.Now().Unix(),AuthToken:token},nil}
 type BHttpjProxy struct{btNode*BitTorrentNode;torConn*TorConnection;i2pConn*I2pConnection;obfs*ObfsConnection;snowflake*SnowflakeConnection}
 func NewBHttpjProxy()*BHttpjProxy{return&BHttpjProxy{btNode:NewBitTorrentNode(),obfs:NewObfsConnection(),snowflake:NewSnowflakeConnection()}}
-func(bp*BHttpjProxy)InitConnections()error{torConn,err:=NewTorConnection("127.0.0.1:8888");if err!=nil{return err};bp.torConn=torConn;i2pConn,err:=NewI2pConnection("127.0.0.1:8888");if err!=nil{return err};bp.i2pConn=i2pConn;return nil}
+func (bp *BHttpjProxy) InitConnections() error {
+    logger := &Logger{}
+    
+    // Initialize I2P first
+    logger.LogOperation("PROXY", "INIT", "Initializing I2P connection...")
+    i2pConn, err := NewI2pConnection("127.0.0.1:8887")
+    if err != nil {
+        logger.LogOperation("PROXY", "WARNING", fmt.Sprintf("I2P initialization failed: %v", err))
+    } else {
+        bp.i2pConn = i2pConn
+    }
+    
+    // Initialize Tor
+    logger.LogOperation("PROXY", "INIT", "Initializing Tor connection...")
+    torConn, err := NewTorConnection("127.0.0.1:8888")
+    if err != nil {
+        logger.LogOperation("PROXY", "WARNING", fmt.Sprintf("Tor initialization failed: %v", err))
+    } else {
+        bp.torConn = torConn
+    }
+    
+    return nil
+}
 func (bp *BHttpjProxy) ConvertToBHttpj(httpData string) (*BHttpjRequest, error) {
     lines := bytes.Split([]byte(httpData), []byte("\r\n"))
     if len(lines) == 0 {
@@ -140,5 +257,21 @@ func (bp *BHttpjProxy) handleConnection(conn net.Conn) {
 }
 func(bp*BHttpjProxy)StartServer(port int)error{listener,err:=net.Listen("tcp",fmt.Sprintf("127.0.0.1:%d",port));if err!=nil{return err};fmt.Printf("BHTTPJ Proxy listening on port %d\n",port);err=bp.InitConnections();if err!=nil{return err};go bp.startBitTorrentListener();for{conn,err:=listener.Accept();if err!=nil{continue};go bp.handleConnection(conn)}};
 func(bp*BHttpjProxy)startBitTorrentListener(){listener,err:=net.Listen("tcp","127.0.0.1:6881");if err!=nil{return};for{conn,err:=listener.Accept();if err!=nil{continue};go func(c net.Conn){defer c.Close();buffer:=make([]byte,8192);n,err:=c.Read(buffer);if err!=nil{return};bp.btNode.HandlePacket(buffer[:n])}(conn)}}
-
-func main(){proxy:=NewBHttpjProxy();err:=proxy.StartServer(8888);if err!=nil{fmt.Printf("Error: %s\n",err)}}
+func main() {
+    // First run setup to install required tools
+    runsetup()
+    
+    // Create new proxy instance
+    proxy := NewBHttpjProxy()
+    
+    // Initialize logger
+    logger := &Logger{}
+    logger.LogOperation("MAIN", "STARTUP", "BHTTPJ proxy starting...")
+    
+    // Start the proxy server
+    err := proxy.StartServer(8888)
+    if err != nil {
+        logger.LogOperation("MAIN", "ERROR", fmt.Sprintf("Failed to start: %v", err))
+        return
+    }
+}
