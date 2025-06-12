@@ -1,6 +1,6 @@
 ![Docker Pulls](https://img.shields.io/docker/pulls/wolftechinnovations/bhttpj-proxy)
-![GitHub Repo stars](https://img.shields.io/github/stars/WolfTechInnovations/BHTTPJ?style=social)
-![GitHub last commit](https://img.shields.io/github/last-commit/WolfTechInnovations/BHTTPJ)
+![GitHub Repo stars](https://img.shields.io/github/stars/WolfTech-Innovations/BHTTPJ?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/WolfTech-Innovations/BHTTPJ)
 # BHTTPJ - Bittorrent HTTP JSON
 
 A privacy-focused proxy system that combines blockchain technology with multiple privacy layers including Tor, I2P, and Snowflake relays.
@@ -21,7 +21,7 @@ A privacy-focused proxy system that combines blockchain technology with multiple
 
 ```bash
 # Clone the repository
-git clone https://github.com/WolfTechInnovations/BHTTPJ
+git clone https://github.com/WolfTech-Innovations/BHTTPJ
 cd BHTTPJ
 
 # Build the proxy
