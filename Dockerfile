@@ -1,5 +1,5 @@
 # Use Debian as base image
-FROM debian:bullseye-slim
+FROM ubuntu:latest
 
 # Update package list and install necessary packages
 RUN apt-get update && apt-get install -y \
