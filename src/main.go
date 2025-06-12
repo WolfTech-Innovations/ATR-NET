@@ -33,7 +33,10 @@ func installTools() {
     runCommand("sudo", "apt-get", "install", "-y", "tor")
     runCommand("sudo", "systemctl", "start", "tor")
 	runCommand("sudo", "adduser", "--system", "--disabled-login", "--disabled-password", "--group", "i2p")
-    runCommand("sudo", "mkdir", "/home/i2p")
+    runCommand("sudo", "mkdir", "-p", "/home/i2p/.i2p")
+    runCommand("sudo", "chown", "-R", "i2p:i2p", "/var/lib/i2p")
+    runCommand("sudo", "chmod", "777", "/home/i2p")
+    runCommand("sudo", "chmod", "777", "/home/i2p/*")
     runCommand("sudo", "-u", "i2p", "i2prouter", "start", "--port", "8887")
     
 }
