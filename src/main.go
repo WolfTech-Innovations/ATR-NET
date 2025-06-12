@@ -32,9 +32,9 @@ func installTools() {
     logger.LogOperation("SETUP", "TOR", "Installing Tor...")
     runCommand("sudo", "apt-get", "install", "-y", "tor")
     runCommand("sudo", "systemctl", "start", "tor")
-    logger.LogOperation("SETUP", "WAIT", "Waiting for services to initialize...")
-    time.Sleep(15 * time.Second)
-    runCommand("i2prouter", "start", "--port", "8887", "&")
+	runCommand("sudo", "adduser", "--system", "--no-create-home", "--disabled-login", "--disabled-password", "--group", "i2p")
+    runCommand("sudo", "-u", "i2p", "i2prouter", "start", "--port", "8887")
+    
 }
 func runsetup() {
 	installTools()
