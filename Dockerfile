@@ -15,7 +15,7 @@ RUN wget -O go.tar.gz "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz"
     && tar -C /usr/local -xzf go.tar.gz \
     && rm go.tar.gz
 RUN sudo apt update
-RUN sudo apt install software-properties-common
+RUN sudo apt install software-properties-common -y
 # Set Go environment variables
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
