@@ -171,7 +171,7 @@ func (bp *BHttpjProxy) InitConnections() error {
     
     // Initialize I2P first
     logger.LogOperation("PROXY", "INIT", "Initializing I2P connection...")
-    i2pConn, err := NewI2pConnection("127.0.0.1:4444")
+    i2pConn, err := NewI2pConnection("127.0.0.1:32001")
     if err != nil {
         logger.LogOperation("PROXY", "WARNING", fmt.Sprintf("I2P initialization failed: %v", err))
     } else {
