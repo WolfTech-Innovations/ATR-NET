@@ -36,7 +36,7 @@ func installTools() {
     runCommand("sudo", "mkdir", "-p", "/home/i2p/.i2p")
     runCommand("sudo", "chown", "-R", "i2p:i2p", "/var/lib/i2p")
     runCommand("sudo", "chmod", "777", "/home/i2p")
-    runCommand("sudo", "-u", "i2p", "i2prouter", "start", "--port", "8887")
+    runCommand("sudo", "-u", "i2p", "i2prouter", "start")
     
 }
 func runsetup() {
@@ -168,7 +168,7 @@ func (bp *BHttpjProxy) InitConnections() error {
     
     // Initialize I2P first
     logger.LogOperation("PROXY", "INIT", "Initializing I2P connection...")
-    i2pConn, err := NewI2pConnection("127.0.0.1:8887")
+    i2pConn, err := NewI2pConnection("127.0.0.1:4444")
     if err != nil {
         logger.LogOperation("PROXY", "WARNING", fmt.Sprintf("I2P initialization failed: %v", err))
     } else {
@@ -177,7 +177,7 @@ func (bp *BHttpjProxy) InitConnections() error {
     
     // Initialize Tor
     logger.LogOperation("PROXY", "INIT", "Initializing Tor connection...")
-    torConn, err := NewTorConnection("127.0.0.1:8888")
+    torConn, err := NewTorConnection("127.0.0.1:9050")
     if err != nil {
         logger.LogOperation("PROXY", "WARNING", fmt.Sprintf("Tor initialization failed: %v", err))
     } else {
