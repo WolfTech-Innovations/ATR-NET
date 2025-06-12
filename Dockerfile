@@ -1,43 +1,60 @@
-# Use Debian as base image
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
-# Update package list and install necessary packages
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update and install dependencies
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
     ca-certificates \
     sudo \
-    && rm -rf /var/lib/apt/lists/*
+    systemd \
+    golang-1.21 \
+    software-properties-common \
+    gnupg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Go
-ENV GO_VERSION=1.21.5
-RUN wget -O go.tar.gz "https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
-    && tar -C /usr/local -xzf go.tar.gz \
-    && rm go.tar.gz
-RUN sudo apt update
-RUN sudo apt install software-properties-common gnupg -y
-# Set Go environment variables
-ENV PATH="/usr/local/go/bin:${PATH}"
+# Use Go 1.21 from system package (or optionally install manually like before)
+ENV PATH="/usr/lib/go-1.21/bin:${PATH}"
 ENV GOPATH="/go"
 ENV GOBIN="/go/bin"
 
 # Create working directory
 WORKDIR /app
 
-# Copy go module files first (for better caching)
+# Copy Go module files first
 COPY go.mod go.sum* ./
 
 # Download dependencies
 RUN go mod download
 
-# Copy source code
-COPY src/ ./src/
+# Copy source
+COPY src/ src/
 
-# Build the application
-RUN go build -o main ./src/main.go
+# Build
+RUN go build -o main src/main.go
 
-# Expose all ports
-EXPOSE 1-65535
+# Create systemd service file
+RUN mkdir -p /etc/systemd/system
+RUN echo "[Unit]\n\
+Description=Go App Service\n\
+After=network.target\n\
+\n\
+[Service]\n\
+ExecStart=/app/main\n\
+WorkingDirectory=/app\n\
+Restart=always\n\
+User=root\n\
+\n\
+[Install]\n\
+WantedBy=multi-user.target" > /etc/systemd/system/go-app.service
 
-# Run the application as sudo
-CMD ["sudo", "./main"]
+# Enable the service
+RUN systemctl enable go-app.service
+
+STOPSIGNAL SIGRTMIN+3
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+# systemd as init
+CMD ["/sbin/init"]
