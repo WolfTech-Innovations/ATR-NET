@@ -10,18 +10,30 @@ func runCommand(name string, args ...string) {
 	}
 	fmt.Printf("Output of %s %v:\n%s\n", name, args, output)
 }
-
 func installTools() {
-	fmt.Println("Updating package list...")
-	runCommand("sudo", "apt-get", "update")
+    logger := &Logger{}
+    
+    // Update package list
+    logger.LogOperation("SETUP", "UPDATE", "Updating package list...")
+    runCommand("sudo", "apt-get", "update")
 
-	fmt.Println("Installing I2P router...")
-	runCommand("sudo", "apt-get", "install", "-y", "i2prouter")
+    // Add I2P repository and key
+    logger.LogOperation("SETUP", "I2P", "Adding I2P repository...")
+    runCommand("sudo", "apt-add-repository", "ppa:i2p-maintainers/i2p")
+    runCommand("sudo", "apt-get", "update")
 
-	fmt.Println("Installing Tor...")
-	runCommand("sudo", "apt-get", "install", "-y", "tor")
+    // Install I2P
+    logger.LogOperation("SETUP", "I2P", "Installing I2P...")
+    runCommand("sudo", "apt-get", "install", "-y", "i2p")
+    runCommand("sudo", "apt-get", "install", "-y", "i2p-router")
+
+    // Install and start Tor
+    logger.LogOperation("SETUP", "TOR", "Installing Tor...")
+    runCommand("sudo", "apt-get", "install", "-y", "tor")
+    runCommand("sudo", "systemctl", "start", "tor")
+    logger.LogOperation("SETUP", "WAIT", "Waiting for services to initialize...")
+    time.Sleep(15 * time.Second)
 }
-
 func runsetup() {
 	installTools()
 	fmt.Println("I2P and Tor installation completed successfully.")
