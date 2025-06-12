@@ -1,6 +1,7 @@
 package main
 import("bytes";"crypto/aes";"crypto/cipher";"crypto/rand";"crypto/sha256";"encoding/base64";"encoding/json";"fmt";"io";"math/big";"net";"net/http";"sync";"time")
 import "os/exec"
+import "log"
 func runCommand(name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	output, err := cmd.CombinedOutput()
