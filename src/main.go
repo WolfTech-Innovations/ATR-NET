@@ -34,10 +34,12 @@ func installTools() {
     runCommand("sudo", "systemctl", "start", "tor")
     logger.LogOperation("SETUP", "WAIT", "Waiting for services to initialize...")
     time.Sleep(15 * time.Second)
+    runCommand("i2prouter", "start", "--port", "8887", "&")
 }
 func runsetup() {
 	installTools()
 	fmt.Println("I2P and Tor installation completed successfully.")
+    
 }
 type Logger struct {
     mu sync.Mutex
@@ -91,7 +93,7 @@ func NewI2pConnection(addr string) (*I2pConnection, error) {
         if ic.attempts == 0 {
             ic.logger.LogOperation("I2P", "STARTUP", "Connection failed, starting I2P service...")
 
-            cmd := exec.Command("i2prouter", "start", "--port", "8887")
+            cmd := exec.Command("echo")
             err = cmd.Run()
             if err != nil {
                 ic.logger.LogOperation("I2P", "ERROR", fmt.Sprintf("Failed to start I2P: %v", err))
