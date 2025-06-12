@@ -36,7 +36,6 @@ func installTools() {
     runCommand("sudo", "mkdir", "-p", "/home/i2p/.i2p")
     runCommand("sudo", "chown", "-R", "i2p:i2p", "/var/lib/i2p")
     runCommand("sudo", "chmod", "777", "/home/i2p")
-    runCommand("sudo", "chmod", "777", "/home/i2p/*")
     runCommand("sudo", "-u", "i2p", "i2prouter", "start", "--port", "8887")
     
 }
