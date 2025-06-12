@@ -1,4 +1,3 @@
-![Docker Pulls](https://img.shields.io/docker/pulls/wolftechinnovations/bhttpj-proxy)
 ![GitHub Repo stars](https://img.shields.io/github/stars/WolfTech-Innovations/BHTTPJ?style=social)
 ![GitHub last commit](https://img.shields.io/github/last-commit/WolfTech-Innovations/BHTTPJ)
 # BHTTPJ - Bittorrent HTTP JSON
