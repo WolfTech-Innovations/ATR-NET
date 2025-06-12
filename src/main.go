@@ -27,7 +27,8 @@ func installTools() {
     runCommand("sudo", "apt-get", "install", "-y", "i2p")
     runCommand("sudo", "apt-get", "install", "-y", "i2p-router")
     runCommand("sudo", "apt-get", "install", "-y", "i2pd")
-
+    logger.LogOperation("SETUP", "I2P", "Enabling I2P daemon autostart...")
+    runCommand("sudo", "sed", "-i", "s/^RUN_DAEMON=.*/RUN_DAEMON=true/", "/etc/default/i2p")
     // Install and start Tor
     logger.LogOperation("SETUP", "TOR", "Installing Tor...")
     runCommand("sudo", "apt-get", "install", "-y", "tor")
