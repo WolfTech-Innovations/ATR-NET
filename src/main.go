@@ -1,5 +1,17 @@
 package main
 import("bytes";"crypto/aes";"crypto/cipher";"crypto/rand";"crypto/sha256";"encoding/base64";"encoding/json";"fmt";"io";"math/big";"net";"net/http";"sync";"time")
+
+type Logger struct {
+    mu sync.Mutex
+}
+
+func (l *Logger) LogOperation(layer, operation, details string) {
+    l.mu.Lock()
+    defer l.mu.Unlock()
+    timestamp := time.Now().Format("15:04:05.000")
+    fmt.Printf("[\033[1;36m%s\033[0m] [\033[1;33m%s\033[0m] [\033[1;32m%s\033[0m] %s\n",
+        timestamp, layer, operation, details)
+}
 type BHttpjRequest struct{ID string `json:"id"`;Method string `json:"method"`;URL string `json:"url"`;Headers map[string]string `json:"headers"`;Body []byte `json:"body,omitempty"`;Timestamp int64 `json:"timestamp"`;AuthToken string `json:"auth_token"`}
 type BHttpjResponse struct{ID string `json:"id"`;Status int `json:"status"`;Headers map[string]string `json:"headers"`;Body []byte `json:"body"`;Timestamp int64 `json:"timestamp"`;AuthToken string `json:"auth_token"`}
 type BlockchainBlock struct{Index uint64 `json:"index"`;Timestamp int64 `json:"timestamp"`;Data []byte `json:"data"`;PreviousHash string `json:"previous_hash"`;Hash string `json:"hash"`;Nonce uint64 `json:"nonce"`}
@@ -38,10 +50,95 @@ func(btn*BitTorrentNode)ProcessHTTPRequest(req*BHttpjRequest)(*BHttpjResponse,er
 type BHttpjProxy struct{btNode*BitTorrentNode;torConn*TorConnection;i2pConn*I2pConnection;obfs*ObfsConnection;snowflake*SnowflakeConnection}
 func NewBHttpjProxy()*BHttpjProxy{return&BHttpjProxy{btNode:NewBitTorrentNode(),obfs:NewObfsConnection(),snowflake:NewSnowflakeConnection()}}
 func(bp*BHttpjProxy)InitConnections()error{torConn,err:=NewTorConnection("127.0.0.1:8888");if err!=nil{return err};bp.torConn=torConn;i2pConn,err:=NewI2pConnection("127.0.0.1:8888");if err!=nil{return err};bp.i2pConn=i2pConn;return nil}
-func(bp*BHttpjProxy)ConvertToBHttpj(httpData string)(*BHttpjRequest,error){lines:=bytes.Split([]byte(httpData),[]byte("\r\n"));firstLine:=string(lines[0]);parts:=bytes.Fields([]byte(firstLine));method:=string(parts[0]);url:=string(parts[1]);headers:=make(map[string]string);bodyStart:=0;for i:=1;i<len(lines);i++{line:=string(lines[i]);if line==""{bodyStart=i+1;break};headerParts:=bytes.SplitN([]byte(line),[]byte(":"),2);if len(headerParts)==2{headers[string(bytes.TrimSpace(headerParts[0]))]=string(bytes.TrimSpace(headerParts[1]))}};var body[]byte;if bodyStart<len(lines){body=bytes.Join(lines[bodyStart:],[]byte("\n"))};id,_:=rand.Int(rand.Reader,big.NewInt(1000000));token:=bp.btNode.GenerateAuthToken(url);return&BHttpjRequest{ID:fmt.Sprintf("%d",id),Method:method,URL:url,Headers:headers,Body:body,Timestamp:time.Now().Unix(),AuthToken:token},nil}
+func (bp *BHttpjProxy) ConvertToBHttpj(httpData string) (*BHttpjRequest, error) {
+    lines := bytes.Split([]byte(httpData), []byte("\r\n"))
+    if len(lines) == 0 {
+        return nil, fmt.Errorf("invalid HTTP request: empty request")
+    }
+
+    firstLine := string(lines[0])
+    parts := bytes.Fields([]byte(firstLine))
+    if len(parts) < 2 {
+        return nil, fmt.Errorf("invalid HTTP request: missing method or URL")
+    }
+
+    method := string(parts[0])
+    url := string(parts[1])
+    
+    headers := make(map[string]string)
+    bodyStart := 0
+    
+    // Parse headers safely
+    for i := 1; i < len(lines); i++ {
+        line := string(lines[i])
+        if line == "" {
+            bodyStart = i + 1
+            break
+        }
+        
+        headerParts := bytes.SplitN([]byte(line), []byte(":"), 2)
+        if len(headerParts) == 2 {
+            key := string(bytes.TrimSpace(headerParts[0]))
+            value := string(bytes.TrimSpace(headerParts[1]))
+            headers[key] = value
+        }
+    }
+
+    var body []byte
+    if bodyStart < len(lines) {
+        body = bytes.Join(lines[bodyStart:], []byte("\n"))
+    }
+
+    // Generate request ID safely
+    idInt, err := rand.Int(rand.Reader, big.NewInt(1000000))
+    if err != nil {
+        return nil, fmt.Errorf("failed to generate request ID: %v", err)
+    }
+
+    token := bp.btNode.GenerateAuthToken(url)
+
+    return &BHttpjRequest{
+        ID:        fmt.Sprintf("%d", idInt),
+        Method:    method,
+        URL:       url,
+        Headers:   headers,
+        Body:      body,
+        Timestamp: time.Now().Unix(),
+        AuthToken: token,
+    }, nil
+}
 func(bp*BHttpjProxy)ProcessLayers(data[]byte)([]byte,error){snowflakeData,err:=bp.snowflake.Relay(data);if err!=nil{return nil,err};blockchainData,err:=bp.btNode.GetBlockchainData();if err!=nil{return nil,err};obfsBlockchain:=bp.obfs.ObfuscateBlockchain(blockchainData);obfsData:=bp.obfs.Obfuscate(snowflakeData);combinedData:=append(obfsData,obfsBlockchain...);i2pData:=combinedData;if bp.i2pConn!=nil{i2pData,err=bp.i2pConn.Tunnel(combinedData);if err!=nil{return nil,err}};if bp.torConn!=nil{err=bp.torConn.Send(i2pData);if err!=nil{return nil,err};return[]byte{},nil};return i2pData,nil}
 func(bp*BHttpjProxy)HandleWebRequest(httpRequest string)(string,error){bhttpjReq,err:=bp.ConvertToBHttpj(httpRequest);if err!=nil{return"",err};reqJSON,err:=json.Marshal(bhttpjReq);if err!=nil{return"",err};_,err=bp.ProcessLayers(reqJSON);if err!=nil{return"",err};err=bp.btNode.SendRequest(bhttpjReq);if err!=nil{return"",err};time.Sleep(100*time.Millisecond);bp.btNode.mu.RLock();resp,exists:=bp.btNode.responses[bhttpjReq.ID];bp.btNode.mu.RUnlock();if exists{return fmt.Sprintf("HTTP/1.1 %d OK\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s",resp.Status,len(resp.Body),string(resp.Body)),nil};return"HTTP/1.1 408 Request Timeout\r\n\r\n",nil}
+func (bp *BHttpjProxy) handleConnection(conn net.Conn) {
+    defer conn.Close()
+    
+    buffer := make([]byte, 4096)
+    n, err := conn.Read(buffer)
+    if err != nil {
+        fmt.Printf("Error reading from connection: %v\n", err)
+        return
+    }
+    
+    if n == 0 {
+        fmt.Printf("Empty request received\n")
+        return
+    }
+
+    request := string(buffer[:n])
+    response, err := bp.HandleWebRequest(request)
+    
+    if err != nil {
+        errorResponse := fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/plain\r\n\r\nError: %s", err)
+        conn.Write([]byte(errorResponse))
+        return
+    }
+
+    _, err = conn.Write([]byte(response))
+    if err != nil {
+        fmt.Printf("Error writing response: %v\n", err)
+    }
+}
 func(bp*BHttpjProxy)StartServer(port int)error{listener,err:=net.Listen("tcp",fmt.Sprintf("127.0.0.1:%d",port));if err!=nil{return err};fmt.Printf("BHTTPJ Proxy listening on port %d\n",port);err=bp.InitConnections();if err!=nil{return err};go bp.startBitTorrentListener();for{conn,err:=listener.Accept();if err!=nil{continue};go bp.handleConnection(conn)}};
 func(bp*BHttpjProxy)startBitTorrentListener(){listener,err:=net.Listen("tcp","127.0.0.1:6881");if err!=nil{return};for{conn,err:=listener.Accept();if err!=nil{continue};go func(c net.Conn){defer c.Close();buffer:=make([]byte,8192);n,err:=c.Read(buffer);if err!=nil{return};bp.btNode.HandlePacket(buffer[:n])}(conn)}}
-func(bp*BHttpjProxy)handleConnection(conn net.Conn){defer conn.Close();buffer:=make([]byte,4096);n,err:=conn.Read(buffer);if err!=nil{return};request:=string(buffer[:n]);response,err:=bp.HandleWebRequest(request);if err!=nil{response=fmt.Sprintf("HTTP/1.1 500 Internal Server Error\r\n\r\nError: %s",err)};conn.Write([]byte(response))}
+
 func main(){proxy:=NewBHttpjProxy();err:=proxy.StartServer(8888);if err!=nil{fmt.Printf("Error: %s\n",err)}}
