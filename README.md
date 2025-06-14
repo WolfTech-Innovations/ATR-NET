@@ -50,7 +50,7 @@ Port: 8888
 
 3. Test the connection:
 ```bash
-curl -v -X GET  http://192.168.0.11:8888/ 'https://websim.com'
+curl -v -X GET  http://192.168.0.11:8888/ 'https://example.com'
 ```
 
 ## Architecture
