@@ -1,12 +1,20 @@
 package main
-import("bytes";"crypto/aes";"crypto/cipher";"crypto/rand";"crypto/sha256";"encoding/base64";"encoding/json";"fmt";"io";"math/big";"net";"net/http";"sync";"time";"os/exec";"log")
+import("bytes";"crypto/aes";"crypto/cipher";"crypto/rand";"crypto/sha256";"encoding/base64";"encoding/json";"fmt";"io";"math/big";"net";"net/http";"sync";"time")
+
 type Logger struct{mu sync.Mutex}
 func(l*Logger)Log(layer,op,details string,extra ...string){l.mu.Lock();defer l.mu.Unlock();ts:=time.Now().Format("2006-01-02 15:04:05.000");fmt.Printf("[\033[1;36m%s\033[0m] [\033[1;33m%s\033[0m] [\033[1;32m%s\033[0m] %s",ts,layer,op,details);for _,e:=range extra{fmt.Printf(" | %s",e)};fmt.Println()}
 type BHttpjRequest struct{ID,Method,URL,AuthToken string;Headers map[string]string;Body[]byte;Timestamp int64}
 type BHttpjResponse struct{ID string;Status int;Headers map[string]string;Body[]byte;Timestamp int64;AuthToken string}
 type BlockchainBlock struct{Index uint64;Timestamp int64;Data[]byte;PreviousHash,Hash string;Nonce uint64}
 type BHttpjBlockchain struct{Blocks[]BlockchainBlock;Difficulty int;mu sync.RWMutex}
-func NewBlockchain()*BHttpjBlockchain{g:=BlockchainBlock{0,time.Now().Unix(),[]byte("genesis"),"0","0",0};return&BHttpjBlockchain{[]BlockchainBlock{g},4}}
+func NewBlockchain()*BHttpjBlockchain{
+    g := BlockchainBlock{0, time.Now().Unix(), []byte("genesis"), "0", "0", 0}
+    return &BHttpjBlockchain{
+        Blocks:     []BlockchainBlock{g},
+        Difficulty: 4,
+        mu:         sync.RWMutex{},
+    }
+}
 func(bc*BHttpjBlockchain)CalculateHash(b*BlockchainBlock)string{h:=sha256.New();h.Write([]byte(fmt.Sprintf("%d%d%s%s%d",b.Index,b.Timestamp,b.Data,b.PreviousHash,b.Nonce)));return base64.StdEncoding.EncodeToString(h.Sum(nil))}
 func(bc*BHttpjBlockchain)MineBlock(b BlockchainBlock)BlockchainBlock{t:="";for i:=0;i<bc.Difficulty;i++{t+="0"};for{b.Hash=bc.CalculateHash(&b);if len(b.Hash)>=bc.Difficulty&&b.Hash[:bc.Difficulty]==t{break};b.Nonce++};return b}
 func(bc*BHttpjBlockchain)AddBlock(data[]byte){bc.mu.Lock();defer bc.mu.Unlock();p:=&bc.Blocks[len(bc.Blocks)-1];b:=BlockchainBlock{p.Index+1,time.Now().Unix(),data,p.Hash,"",0};bc.Blocks=append(bc.Blocks,bc.MineBlock(b))}
