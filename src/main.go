@@ -21,7 +21,6 @@ func installTools() {
     runCommand("sudo", "apt-get", "install", "-y", "i2pd")
     logger.LogOperation("SETUP", "I2P", "Enabling I2P daemon autostart...")
     runCommand("sudo", "sed", "-i", "s/^RUN_DAEMON=.*/RUN_DAEMON=true/", "/etc/default/i2p")
-    runCommand("sudo", "service", "i2p", "start")
     runCommand("sudo", "systemctl", "start", "i2p")
 	runCommand("sudo", "adduser", "--system", "--disabled-login", "--disabled-password", "--group", "i2p")
     runCommand("sudo", "mkdir", "-p", "/home/i2p/.i2p")
