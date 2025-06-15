@@ -30,12 +30,13 @@ go build -o bhttpj src/main.go
 
 - Go 1.19+
 - Linux system
+- i2P Installed
 
 ## Usage
-
+#[INSTALL I2P FIRST]#
 1. Start the proxy:
 ```bash
-sudo ./bhttpj
+./bhttpj
 ```
 
 2. Configure your browser/application to use the proxy:
