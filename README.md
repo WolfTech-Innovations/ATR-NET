@@ -163,10 +163,7 @@ ATR-NET/
 ├── main.go          # Core network implementation
 ├── README.md        # This file
 ├── LICENSE          # MIT License
-└── docs/           # Additional documentation
-    ├── protocol.md  # Protocol specification
-    ├── security.md  # Security analysis
-    └── api.md       # API documentation
+|_________________
 ```
 
 ### Contributing
