@@ -2,20 +2,19 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/WolfTech-Innovations/BHTTPJ)
 # BHTTPJ - Bittorrent HTTP JSON
 
-A privacy-focused proxy system that combines blockchain technology with multiple privacy layers including I2P, and Snowflake relays.
+A privacy-focused proxy system that combines blockchain technology with multiple privacy layers including a custom layer called ATR, and Snowflake relays.
 
 ## Features
 
-- 🔗 **Blockchain Integration** - Immutable request/response logging with PoW mining
 - 🧅 **Multi-Layer Privacy**
-  - I2P tunneling
+  - ATR tunneling
   - Snowflake relay system
   - Custom traffic obfuscation
 - 🌐 **P2P Communication** - BitTorrent-style peer discovery and data transfer
 - 🔐 **Strong Encryption** - AES-GCM encryption with blockchain validation
 - 🎯 **Request Authentication** - Token-based request verification
 
-## Installation
+## How to build
 
 ```bash
 # Clone the repository
@@ -24,9 +23,6 @@ cd BHTTPJ
 
 # Build the proxy
 go build -o bhttpj src/main.go
-
-# Run setup (requires sudo for Tor/I2P installation)
-sudo ./bhttpj
 ```
 
 ## Requirements
@@ -50,7 +46,7 @@ Port: 8888
 
 3. Test the connection:
 ```bash
-curl -v -X GET  http://192.168.0.11:8888/ 'https://example.com'
+curl -v -X GET  http://localhost:8888/ 'https://example.com'
 ```
 
 ## Architecture
@@ -62,11 +58,9 @@ BHTTPJ Proxy
      ↓
 Snowflake Relay
      ↓
-Blockchain Verification
-     ↓
 Obfuscation Layer
      ↓
-I2P Tunnel
+ATR Tunnel
      ↓
 Target Server
 ```
@@ -78,7 +72,6 @@ Target Server
 - Traffic obfuscation
 - Distributed relay network
 - Token-based authentication
-- Proof-of-work validation
 
 ## Contributing
 
