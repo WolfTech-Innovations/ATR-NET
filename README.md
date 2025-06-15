@@ -209,6 +209,7 @@ This project is licensed under the MIT License
 - The Bitcoin community for blockchain concepts
 - The Go team for excellent networking libraries
 - All contributors and early adopters
+- Claude AI for help with the coding and making this awesome README
 
 ---
 
