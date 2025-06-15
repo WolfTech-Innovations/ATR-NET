@@ -2,7 +2,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/WolfTech-Innovations/BHTTPJ)
 # BHTTPJ - Bittorrent HTTP JSON
 
-A privacy-focused proxy system that combines blockchain technology with multiple privacy layers including a custom layer called ATR, and Snowflake relays.
+A privacy-focused proxy system that uses multiple privacy layers including a custom layer called ATR, and Snowflake relays.
 
 ## Features
 
