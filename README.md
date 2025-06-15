@@ -2,7 +2,6 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Network Status](https://img.shields.io/badge/Network-Live-brightgreen.svg)](https://github.com/WolfTech-Innovations/ATR-NET)
 
 > **Reimagining the Internet: A fully decentralized, anonymous, and encrypted peer-to-peer network**
 
