@@ -1,5 +1,5 @@
 package main
-import("bytes";"crypto/aes";"crypto/cipher";"crypto/ed25519";"crypto/rand";"crypto/sha256";"crypto/tls";"encoding/base64";"encoding/json";"fmt";"io";"net";"net/http";"net/url";"strings";"sync";"time")
+import("bytes";"crypto/aes";"crypto/cipher";"crypto/ed25519";"crypto/rand";_"crypto/sha256";"crypto/tls";_"encoding/base64";"encoding/json";"fmt";"io";"net";"net/http";"net/url";"strings";"sync";"time")
 type L struct{m sync.Mutex}
 func(l*L)P(t,o,d string){l.m.Lock();defer l.m.Unlock();fmt.Printf("[%s][%s] %s\n",t,o,d)}
 type ATRGarlic struct{ID string;Data[][]byte;Routes[][]string;Keys[][]byte;Timestamp int64}
