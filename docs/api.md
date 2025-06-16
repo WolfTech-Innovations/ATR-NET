@@ -258,13 +258,6 @@ type DNS struct {
 - `RES(domain string) string` - Resolves domain
 - `START() error` - Starts DNS service
 
-**Pre-registered Domains:**
-- `search.atr` → `encrypted-search-engine.onion`
-- `social.atr` → `decentralized-social.mesh`
-- `code.atr` → `distributed-git.p2p`
-- `news.atr` → `anonymous-news.net`
-- `market.atr` → `private-marketplace.dark`
-
 ### WEB Server
 HTTP server with proxy capabilities.
 
@@ -410,13 +403,6 @@ echo "LIST" | wget --post-data=- -O- localhost:7778
 ```bash
 # Access the main portal
 curl http://localhost:7781/
-
-# Access specific .atr domains
-curl http://localhost:7781/search.atr
-curl http://localhost:7781/social.atr
-curl http://localhost:7781/code.atr
-curl http://localhost:7781/news.atr
-curl http://localhost:7781/market.atr
 
 # Using wget
 wget http://localhost:7781/
@@ -634,18 +620,6 @@ PUBLISH_DATA="myservice.atr:192.168.1.100"
 
 # Note: Direct TCP requires proper Ed25519 signing
 # This is typically done through ATR-NET client software
-```
-
-#### Simulated Publishing via Web Interface
-
-Since the web server automatically publishes content when you access it, you can trigger publishing by:
-
-```bash
-# Method 1: Access a domain to trigger auto-registration
-curl http://localhost:7781/mynewsite.atr
-
-# Method 2: Use the proxy to publish external content
-curl http://localhost:7781/myexternalsite.com.clear
 ```
 
 #### Publishing Through Node Integration
